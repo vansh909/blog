@@ -1,5 +1,6 @@
 const Blogs = require('../models/blogs.model');
 const Comments = require('../models/comments.model');
+const Replies = require('../models/reply.model')
 
 //adding comment to the particular blog
 exports.AddComments = async(req, res)=>{
@@ -10,7 +11,9 @@ exports.AddComments = async(req, res)=>{
     try {
 
         const blog = await Blogs
-        .findOne({_id: blogId})
+        .findOne({_id: blogId}).lean();
+       
+        
         if(!blog)
         {
             return res.status(400).json({message: "No Blog Found!"});
@@ -30,6 +33,38 @@ exports.AddComments = async(req, res)=>{
             comment: commemt})
 
         
+        
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({error: "Internal Server Error!"});
+    }
+}
+
+exports.replytoComments = async(req, res)=>{
+    const user = req.user;
+    const {text} = req.body;
+    const {commentId} = req.params;
+    try {
+        if(typeof text !='string')
+            return res.status(400).json({message: "Text should be in string!"})
+        
+
+        const comment = await Comments.findOne({_id: commentId}).lean();
+        console.log(commentId);
+        
+        if(!comment)
+            return res.status(400).json({message:"No comments found!"})
+       let newReply = new Replies({
+        commentId:commentId,
+        userId: user._id,
+        text: text
+       })
+
+       await newReply.save();
+       return res.status(201).json({message:"Replied Successfully",
+        reply: newReply
+       })
+       
     } catch (error) {
         console.log(error);
         return res.status(500).json({error: "Internal Server Error!"});
