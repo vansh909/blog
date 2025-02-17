@@ -1,6 +1,7 @@
 const mongoose= require('mongoose')
 const {Follower, FollowerRelation} = require('../models/follower.model');
 const User = require('../models/user.model');
+const {redisClient} = require('../utils/redis.client')
 
 exports.sendRequest  = async(req, res)=>{
     const followedId = req.params.followedId;
@@ -15,8 +16,19 @@ exports.sendRequest  = async(req, res)=>{
         if(!account)
             return res.status(400).json({message:"no such user exists!"});
         const AccountDetails = await User.findById(followedId);
+         // Check if a follow request already exists
+         const existingRequest = await FollowerRelation.findOne({
+            followerId: user.id,
+            followedId: followedId
+        });
+
+        if (existingRequest) {
+            return res.status(400).json({ message: "Follow request already sent!" });
+        }
         if(AccountDetails.isPrivate)
         {
+            console.log(user._id);
+            
             let newRelation = new FollowerRelation({
                 followedId: account.userId,
                 followerId: user.id,
@@ -112,12 +124,21 @@ exports.acceptOrReject = async(req, res)=>{
                 followerId: followId,
                 followedId: user._id,
                 status: "pending",
-            });
+            }).populate('followerId', 'username');
+
 
             if (pendingRequest) {
                 pendingRequest.status = "accepted";
+                const followerDetails = pendingRequest.followerId.username;
+                console.log(followerDetails);
+                
                 await pendingRequest.save();
-           
+                await redisClient.lPush(`activity:${user._id}`, JSON.stringify({
+                    type:'follow',
+                    by: pendingRequest.followerId,
+                    username: followerDetails
+                    
+                }))
                 const followerCount= await Follower.findOne({userId: user._id});
                 followerCount.followerCount++;
                 followerCount.save();
@@ -126,6 +147,7 @@ exports.acceptOrReject = async(req, res)=>{
                 FollowingCount.followingCount++;
                 FollowingCount.save();
                 
+
                 
                 return res.status(200).json({ message: "Request accepted and counts updated!" });
             } else {

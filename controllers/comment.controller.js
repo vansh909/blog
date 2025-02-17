@@ -1,6 +1,7 @@
 const Blogs = require('../models/blogs.model');
 const Comments = require('../models/comments.model');
 const Replies = require('../models/reply.model')
+const {redisClient} = require('../utils/redis.client')
 
 //adding comment to the particular blog
 exports.AddComments = async(req, res)=>{
@@ -11,7 +12,7 @@ exports.AddComments = async(req, res)=>{
     try {
 
         const blog = await Blogs
-        .findOne({_id: blogId}).lean();
+        .findOne({_id: blogId}).lean()
        
         
         if(!blog)
@@ -27,6 +28,17 @@ exports.AddComments = async(req, res)=>{
             authorId: user._id,
             comment: text
         })
+        await redilient.lPush(`activity:${blog.authorId}`, JSON.stringify({
+            type: 'comment',
+            comment: text,
+            by:user._id,
+            username:user.username,
+            blogId: blogId,
+            timestamp: new Date().toISOString()
+        }))
+        // console.log("working");
+        
+        await redisClient.expire(`activity${blog.authorId}`, 24*60*60);
         await commemt.save();
         return res.status(201).json({
             message: "Comment added Successfully!",

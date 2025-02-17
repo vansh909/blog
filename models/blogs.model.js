@@ -18,12 +18,6 @@ const blogSchema = new mongoose.Schema({
         required: true
     }, 
     
-    likes:{
-        type: Array,
-        required: true,
-        default: []
-    }, 
-    
     likeCount:{
         type:Number,
         required: true,

@@ -1,4 +1,4 @@
-const { resolve } = require("path");
+
 const User = require("../models/user.model");
 const {Follower} = require('../models/follower.model')
 const bcrypt = require("bcrypt");
@@ -25,6 +25,7 @@ exports.signup = async (req, res) => {
             return res.status(400).send("User akready exist");
         }
         const usercheck = await User.countDocuments();
+        
         let role = "user";
         let isAdmin = false;
         if (usercheck == 0) {

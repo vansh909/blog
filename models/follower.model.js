@@ -24,13 +24,11 @@ const followerRelation = new mongoose.Schema({
     followerId:{
         type:mongoose.Schema.Types.ObjectId,
         ref:"user",
-        unique: true,
         required:true
     },
     followedId:{
         type:mongoose.Schema.Types.ObjectId,
         ref:"user",
-        unique: true,
         required:true
     }, 
     status:{
