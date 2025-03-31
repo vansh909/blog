@@ -12,7 +12,7 @@ exports.AddComments = async(req, res)=>{
     try {
 
         const blog = await Blogs
-        .findOne({_id: blogId}).lean()
+        .findOne({_id: blogId});
        
         
         if(!blog)
@@ -28,7 +28,7 @@ exports.AddComments = async(req, res)=>{
             authorId: user._id,
             comment: text
         })
-        await redilient.lPush(`activity:${blog.authorId}`, JSON.stringify({
+        await redisClient.lPush(`activity:${blog.authorId}`, JSON.stringify({
             type: 'comment',
             comment: text,
             by:user._id,
@@ -36,10 +36,10 @@ exports.AddComments = async(req, res)=>{
             blogId: blogId,
             timestamp: new Date().toISOString()
         }))
-        // console.log("working");
-        
+        console.log(blog);
         await redisClient.expire(`activity${blog.authorId}`, 24*60*60);
         await commemt.save();
+        await blog.updateOne({$inc: {commentCount: 1}});
         return res.status(201).json({
             message: "Comment added Successfully!",
             comment: commemt})
@@ -77,6 +77,17 @@ exports.replytoComments = async(req, res)=>{
         reply: newReply
        })
        
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({error: "Internal Server Error!"});
+    }
+}
+
+exports.getComments = async(req, res)=>{
+    const {blogId} = req.params;
+    try {
+        const comments = await Comments.find({blogId: blogId}).populate('authorId').lean();
+        return res.status(200).json({comments: comments});
     } catch (error) {
         console.log(error);
         return res.status(500).json({error: "Internal Server Error!"});

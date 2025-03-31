@@ -3,64 +3,97 @@ const {Follower, FollowerRelation} = require('../models/follower.model');
 const User = require('../models/user.model');
 const {redisClient} = require('../utils/redis.client')
 
-exports.sendRequest  = async(req, res)=>{
+exports.sendRequest = async(req, res) => {
     const followedId = req.params.followedId;
-    const user= req.user;
+    const user = req.user;
 
     try {
-        if(!mongoose.Types.ObjectId.isValid(followedId))
-            return res.status(400).json({message: "Invalid user ID format!"})
+        // Validate ID format
+        if(!mongoose.Types.ObjectId.isValid(followedId)) {
+            return res.status(400).json({message: "Invalid user ID format!"});
+        }
+
+        // Check if trying to follow self
+        if(user.id === followedId) {
+            return res.status(400).json({message: "Cannot follow yourself!"});
+        }
+
+        // Find both accounts
         const myAcc = await Follower.findOne({userId: user.id});
+        if(!myAcc) {
+            return res.status(404).json({message: "Your account details not found!"});
+        }
+
         const account = await Follower.findOne({userId: followedId});
-        
-        if(!account)
-            return res.status(400).json({message:"no such user exists!"});
-        const AccountDetails = await User.findById(followedId);
-         // Check if a follow request already exists
-         const existingRequest = await FollowerRelation.findOne({
+        if(!account) {
+            return res.status(404).json({message: "User to follow not found!"});
+        }
+
+        // Check if already following
+        const existingRequest = await FollowerRelation.findOne({
             followerId: user.id,
             followedId: followedId
         });
 
         if (existingRequest) {
-            return res.status(400).json({ message: "Follow request already sent!" });
+            return res.status(400).json({ 
+                message: existingRequest.status === 'pending' 
+                    ? "Follow request already sent!" 
+                    : "Already following this user!" 
+            });
         }
-        if(AccountDetails.isPrivate)
-        {
-            console.log(user._id);
-            
-            let newRelation = new FollowerRelation({
+
+        // Get user details
+        const AccountDetails = await User.findById(followedId);
+        if(!AccountDetails) {
+            return res.status(404).json({message: "User not found!"});
+        }
+
+        // Create new relation based on account privacy
+        if(AccountDetails.isPrivate) {
+            const newRelation = new FollowerRelation({
                 followedId: account.userId,
                 followerId: user.id,
                 status: "pending"
-            })
+            });
             await newRelation.save();
+            
             return res.status(200).json({
-                message: `request sent to ${AccountDetails.username}`,
+                message: `Request sent to ${AccountDetails.username}`,
                 newRelation
-            })
+            });
+        } else {
+            const newRelation = new FollowerRelation({
+                followedId: account.userId,
+                followerId: user.id,
+                status: "accepted"
+            });
+
+            // Update follower counts
+            account.followerCount++;
+            myAcc.followingCount++;
+            
+            // Save all changes in a transaction
+            await Promise.all([
+                account.save(),
+                myAcc.save(),
+                newRelation.save()
+            ]);
+
+            return res.status(200).json({
+                message: `Followed ${AccountDetails.username}`,
+                newRelation
+            });
         }
-        let newRelation = new FollowerRelation({
-            followedId: account.userId,
-            followerId: user.id,
-            status: "accepted"
-        })
-        account.followerCount++;
-        myAcc.followingCount++;
-        account.save();
-        myAcc.save();
-        await newRelation.save();
-        return res.status(200).json({
-            message: `Followed ${AccountDetails.username}`,
-            newRelation
-        })
-        
-        
     } catch (error) {
-        console.log(error);
-        return res.status(500).json({message: "Internal Server Error!"})
+        console.error("Follow request error:", error);
+        return res.status(500).json({
+            message: "Internal Server Error!",
+            error: error.message
+        });
     }
-}
+};
+
 //see all of the pending requests
 exports.seeRequest = async(req,res)=>{
     const {id} = req.user;
@@ -80,7 +113,7 @@ exports.seeRequest = async(req,res)=>{
                 return { ...user.toObject(), requestID: request._id};
             })
         )
-        return res.status(400).json({
+        return res.status(200).json({
             message: "Pending requests",
             requests: userDetails
         })
@@ -208,4 +241,60 @@ exports.seeMyFollowers = async(req, res)=>{
         return res.status(500).json({error: "Internal Server Error!"});
     }
 }
+
+exports.seefollowing = async(req, res)=>{
+    const user = req.user;
+    try {
+        const following = await FollowerRelation.find({
+            followerId: user._id,
+            status: "accepted"
+        }).populate("followedId", "username email").lean()
+
+        const followingDetails = following.map(following=>{
+            return {
+                username: following.followedId.username,
+                email: following.followedId.email
+            };
+        })
+
+        const followingCount = await Follower.findOne({userId: user.id});
+
+        return res
+        .status(200)
+        .json({AccountDetails: followingCount,
+            Following: followingDetails
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({error: "Internal Server Error!"});
+    }   
+}
+
+exports.getFollowingCount = async(req, res)=>{
+    const user  = req.user;
+
+    try {
+        const Account = await Follower.findOne({userId: user._id});
+        if(!Account) return res.status(400).json({message: "No Account Details Found!"});
+        const followingCount = Account.followingCount;
+        return res.status(200).json({"Total Following Count": followingCount});
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({Error:"Internal Server Error!"})
+    }
+}
+
+exports.getFollowersCount = async(req, res)=>{
+    const user = req.user;
+    try {
+        const Account = await Follower.findOne({userId: user._id});
+        if(!Account) return res.status(400).json({message: "No Account Details Found!"});
+        const followerCount = Account.followerCount;
+        return res.status(200).json({"Total Follower Count " : followerCount})
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({error: "Internal Server Error!"});
+    }
+}
+
 

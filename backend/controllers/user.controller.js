@@ -1,10 +1,11 @@
-
 const User = require("../models/user.model");
 const {Follower} = require('../models/follower.model')
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const secret_key = "secretkey";
 const validator = require("validator");
+
+const {FollowerRelation} = require('../models/follower.model')
 
 exports.signup = async (req, res) => {
     const { username, email, password, isPrivate } = req.body;
@@ -91,3 +92,58 @@ exports.login = async (req, res) => {
 };
 
 
+exports.getAllusers = async (req, res) => {
+    const user = req.user;
+    if (!user) return res.status(401).send("Unauthenticated");
+    try {
+        // Find all users that the current user is following
+        const following = await FollowerRelation.find({
+            followerId: user.id,
+            status: { $in: ['accepted', 'pending'] }
+        }).select('followedId');
+
+        // Extract the IDs of users being followed
+        const followingIds = following.map(f => f.followedId);
+
+        // Add current user's ID to the exclusion list
+        const excludeIds = [...followingIds, user.id];
+
+        // Find all users except those in the exclusion list
+        const users = await User.find(
+            { 
+                _id: { $nin: excludeIds }
+            },
+            {
+                username: 1,
+                email: 1,
+                isPrivate: 1,
+                role: 1
+            }
+        );
+
+        return res.status(200).json(users);
+    } catch (error) {
+        console.error("Error fetching users:", error);
+        return res.status(500).json({ message: error.message });
+    }
+};
+
+exports.myProfile = async (req, res)=>{
+    const user = req.user;
+    try {
+        const myDetails  = await User.findById(user.id);
+        const myfollowDetails = await Follower.findOne({userId:user.id});
+
+        const profileDetails = {
+            username: myDetails.username,
+            email: myDetails.email,
+            followerCount: myfollowDetails.followerCount,
+            followingCount: myfollowDetails.followingCount
+        }
+        return res.status(200).json({profileDetails});
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: error.message });
+        
+    }
+}

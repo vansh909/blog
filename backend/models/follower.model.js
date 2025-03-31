@@ -38,7 +38,7 @@ const followerRelation = new mongoose.Schema({
     }, 
     requestedAt:{
         type: Date,
-        default:Date.now()
+        default: Date.now // Fix: Remove () to avoid evaluation at schema definition
     },
     respondedAt:{
         type: Date,
@@ -46,10 +46,15 @@ const followerRelation = new mongoose.Schema({
     }
 }, {timestamps: true});
 
+// Remove the unique index
+// followerRelation.index({ followerId: 1, followedId: 1 }, { unique: true });
+
 const Follower = mongoose.model("follower", followerSchema);
-const FollowerRelation = mongoose.model("FollowRelation", followerRelation);
+const FollowerRelation = mongoose.model("followrelations", followerRelation); // Fix: Match collection name
 
 module.exports = {
     Follower, 
     FollowerRelation
 }
+
+
