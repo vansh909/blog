@@ -1,56 +1,50 @@
 const mongoose = require('mongoose')
 
-const followerSchema  = new mongoose.Schema({
+const followerSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref:"user",
-        unique: true,
+        ref: "user",
         required: true
     },
-    followerCount:{
+    followerCount: {
         type: Number,
         required: true,
         default: 0
     },
-    followingCount:{
+    followingCount: {
         type: Number,
         required: true,
         default: 0
     }
 }, {timestamps: true})
 
-
 const followerRelation = new mongoose.Schema({
-    followerId:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:"user",
-        required:true
+    followerId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "user",
+        required: true
     },
-    followedId:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:"user",
-        required:true
+    followedId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "user",
+        required: true
     }, 
-    status:{
+    status: {
         type: String,
-        enum:["pending", "rejected", "accepted"],
-        default:"pending"
+        enum: ["pending", "rejected", "accepted"],
+        default: "pending"
     }, 
-    requestedAt:{
+    requestedAt: {
         type: Date,
-        default: Date.now // Fix: Remove () to avoid evaluation at schema definition
+        default: Date.now
     },
-    respondedAt:{
-        type: Date,
-        
+    respondedAt: {
+        type: Date
     }
 }, {timestamps: true});
 
-// Remove the unique index
-// followerRelation.index({ followerId: 1, followedId: 1 }, { unique: true });
-
 const Follower = mongoose.model("follower", followerSchema);
-const FollowerRelation = mongoose.model("followrelations", followerRelation); // Fix: Match collection name
+const FollowerRelation = mongoose.model("followrelation", followerRelation);
 
 module.exports = {
     Follower, 

@@ -72,13 +72,25 @@ exports.sendRequest = async(req, res) => {
             // Update follower counts
             account.followerCount++;
             myAcc.followingCount++;
+
             
+            let activity = await redisClient.lPush(`activity:${AccountDetails._id}`,
+               JSON.stringify({
+                   type: 'follow',
+                   by: user.id,
+                   username: user.username,
+                   timestamps: new Date().toISOString(),
+               })
+           );
+           console.log("Activity pushed to Redis:", activity);
             // Save all changes in a transaction
-            await Promise.all([
+            
                 account.save(),
                 myAcc.save(),
                 newRelation.save()
-            ]);
+            
+
+            await redisClient.expire(`activity:${AccountDetails._id}`, 24 * 60 * 60);
 
             return res.status(200).json({
                 message: `Followed ${AccountDetails.username}`,
@@ -166,12 +178,14 @@ exports.acceptOrReject = async(req, res)=>{
                 console.log(followerDetails);
                 
                 await pendingRequest.save();
-                await redisClient.lPush(`activity:${user._id}`, JSON.stringify({
+                let activity = await redisClient.lPush(`activity:${user._id}`, 
+                    JSON.stringify({
                     type:'follow',
                     by: pendingRequest.followerId,
-                    username: followerDetails
-                    
+                    username: followerDetails,
+                    timestamps: new Date().toISOString(),
                 }))
+                console.log("Activity pushed to Redis:", activity);
                 const followerCount= await Follower.findOne({userId: user._id});
                 followerCount.followerCount++;
                 followerCount.save();
@@ -179,6 +193,7 @@ exports.acceptOrReject = async(req, res)=>{
                 const FollowingCount = await Follower.findOne({userId: followId});
                 FollowingCount.followingCount++;
                 FollowingCount.save();
+                await redisClient.expire(`activity:${user._id}`, 24 * 60 * 60);
                 
 
                 

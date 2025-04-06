@@ -13,12 +13,23 @@ import CreateBlog from "./components/CreateBlog";
 import Profile from "./components/Profile";
 import Users from "./components/Users";
 import HomePage from "./components/HomePage";
-import ActivityFeed from './components/ActivityFeed';
+import ActivityFeed from "./components/ActivityFeed";
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuth();
+  console.log("ProtectedRoute isAuthenticated:", isAuthenticated);
+  
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 }
+
+function PublicRoute({ children }) {
+  const { isAuthenticated } = useAuth();
+  console.log("PublicRoute isAuthenticated:", isAuthenticated);
+  
+  return isAuthenticated ? <Navigate to="/blogs" /> : children;
+}
+
+const token = localStorage.getItem("authToken");
 
 function App() {
   return (
@@ -32,13 +43,32 @@ function App() {
                 path="/"
                 element={
                   <Navigate
-                    to={localStorage.getItem('authToken') ? '/blogs' : '/login'}
+                    to={localStorage.getItem("authToken") ? "/blogs" : "/login"}
                     replace
                   />
                 }
               />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/login" element={<Login />} />
+              {/* Protect auth routes from authenticated users */}
+
+              <Route
+                path="/signup"
+                element={
+                  <PublicRoute>
+                    <Signup />
+                  </PublicRoute>
+                }
+              />
+
+              <Route
+                path="/login"
+                element={
+                  <PublicRoute>
+                    <Login />
+                   </PublicRoute>
+                }
+              />
+
+              {/* Rest of your protected routes */}
               <Route
                 path="/blogs"
                 element={

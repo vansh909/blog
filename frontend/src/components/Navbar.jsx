@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { formatDistanceToNow, parseISO } from 'date-fns';
+import { useAuth } from "../context/AuthContext";
 
 // Add this helper function before the Navbar component
 const formatTimeAgo = (timestamp) => {
@@ -14,6 +15,7 @@ const formatTimeAgo = (timestamp) => {
 };
 
 const Navbar = () => {
+    const { setIsAuthenticated } = useAuth(); 
   const [showNotifications, setShowNotifications] = useState(false);
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -47,6 +49,7 @@ const Navbar = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');
+    setIsAuthenticated(false);
     navigate('/login');
   };
 
@@ -55,7 +58,7 @@ const Navbar = () => {
 
   return (
     <nav className="bg-blue-600 p-4 text-white flex justify-between items-center relative">
-      <Link to="/" className="text-lg font-bold">BlogApp</Link>
+      <Link to="/" className="text-lg font-bold">BlogBonds</Link>
       <div className="flex items-center space-x-4">
         {authToken ? (
           <>

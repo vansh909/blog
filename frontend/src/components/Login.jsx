@@ -32,23 +32,17 @@ const Login = () => {
       );
 
       if (response.data) {
-        // Store auth data
-        localStorage.setItem("authToken", response.data.token || response.data.user.token);
+        localStorage.setItem("authToken", response.data.token);
         localStorage.setItem("username", response.data.user.username);
         localStorage.setItem("userId", response.data.user.id);
         
-        // Update auth context
         setIsAuthenticated(true);
         
         // Show success alert
-        alert(`Welcome back, ${response.data.user.username}! Login successful.`);
+        alert(`Welcome back, ${response.data.user.username}!`);
         
-        // Navigate to homepage after a small delay to ensure state updates
-        setTimeout(() => {
-          navigate('/homepage', { replace: true });
-        }, 100);
-      } else {
-        throw new Error("Invalid response from server");
+        // Navigate to blogs page instead of homepage
+        navigate('/blogs', { replace: true });
       }
     } catch (error) {
       console.error("Login error:", error);

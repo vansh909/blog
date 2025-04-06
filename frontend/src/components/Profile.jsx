@@ -8,11 +8,21 @@ const Profile = () => {
   const [error, setError] = useState(null);
   const [showFollowers, setShowFollowers] = useState(false);
   const [showFollowing, setShowFollowing] = useState(false);
+  const [blogCount, setBlogCount] = useState(0);
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchUserData = async () => {
       try {
         const authToken = localStorage.getItem('authToken');
+        // Fetch blogs to get the count
+        const blogsResponse = await axios.get('http://localhost:4000/blogs/myblogs', {
+          headers: { Authorization: `Bearer ${authToken}` },
+          withCredentials: true,
+        });
+        
+        // Update blog count
+        setBlogCount(blogsResponse.data.blogs?.length || 0);
+
         const response = await axios.get('http://localhost:4000/profile', {
           headers: { Authorization: `Bearer ${authToken}` },
           withCredentials: true
@@ -26,7 +36,7 @@ const Profile = () => {
       }
     };
 
-    fetchProfile();
+    fetchUserData();
   }, []);
 
   if (loading) {
@@ -75,7 +85,7 @@ const Profile = () => {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-3 gap-4 p-6 text-center">
+        <div className="grid grid-cols-3 gap-6 mb-6">
           <div 
             className="bg-gray-50 rounded-lg p-4 cursor-pointer hover:bg-gray-100 transition-colors"
             onClick={() => setShowFollowers(true)}
@@ -91,7 +101,7 @@ const Profile = () => {
             <p className="text-gray-600 mt-1">Following</p>
           </div>
           <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-4xl font-bold text-indigo-600">0</p>
+            <p className="text-4xl font-bold text-indigo-600">{blogCount}</p>
             <p className="text-gray-600 mt-1">Posts</p>
           </div>
         </div>

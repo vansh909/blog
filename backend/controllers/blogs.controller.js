@@ -2,7 +2,7 @@ const Blogs = require("../models/blogs.model");
 const Likes = require("../models/likes.model");
 const { FollowerRelation } = require("../models/follower.model");
 const { redisClient } = require("../utils/redis.client");
-const storage = require("../middlewares/multer");
+// const storage = require("../middlewares/multer");
 const cloudinary = require("../utils/cloudinary");
 
 exports.createBlogs = async (req, res) => {
