@@ -128,8 +128,7 @@ git push origin feature/awesome-feature
 ```
 5. Open a pull request
 
-## 📝 License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
 
 ## 🤝 Acknowledgments
 - Create React App
@@ -138,6 +137,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Express.js
 - Node.js community
 
-## 📫 Contact
-Your Name - [@yourtwitter](https://twitter.com/yourtwitter)
-Project Link: [https://github.com/yourusername/blogbonds](https://github.com/yourusername/blogbonds)
+
